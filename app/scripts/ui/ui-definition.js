@@ -113,10 +113,10 @@ var ui = {
         this.setIcon(this.ui.getPaletteActiveButton('lines'));
       },
       onClick: function () {
+        if (this.ui.isToolActive(['line', 'arrow', 'doubleArrow'])) {
+          this.ui.togglePalette('lines');
+        }
         this.ui.getPaletteActiveButton('lines').click();
-      },
-      onLongPress: function () {
-        this.ui.togglePalette('lines');
       },
       icon: require('../../assets/line-icon.svg')
     },
@@ -130,10 +130,10 @@ var ui = {
         this.setIcon(this.ui.getPaletteActiveButton('shapes'));
       },
       onClick: function () {
+        if (this.ui.isToolActive(['rect', 'ellipse', 'square', 'circle'])) {
+          this.ui.togglePalette('shapes');
+        }
         this.ui.getPaletteActiveButton('shapes').click();
-      },
-      onLongPress: function () {
-        this.ui.togglePalette('shapes');
       },
       icon: require('../../assets/circle-icon.svg')
     },
@@ -145,8 +145,10 @@ var ui = {
       classes: 'dt-expand dt-keep-text-edit-mode',
       activatesTool: 'text',
       palette: 'main',
-      onLongPress: function () {
-        this.ui.togglePalette('fontSizes');
+      onClick: function () {
+        if (this.ui.isToolActive(['text'])) {
+          this.ui.togglePalette('fontSizes');
+        }
       },
       onStateChange: function (state) {
         if (state.fontSize && FONT_ICONS[state.fontSize]) {
