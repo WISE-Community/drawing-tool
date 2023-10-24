@@ -103,6 +103,11 @@ UIManager.prototype.togglePalette = function (name) {
   this._palettes[name].toggle();
 };
 
+UIManager.prototype.isToolActive = function(toolNames) {
+  var activeTool = Object.values(this.drawingTool.tools).find(tool => tool.active);
+  return toolNames.some(toolName => activeTool.name.toLowerCase().includes(toolName));
+}
+
 UIManager.prototype.getMainContainer = function () {
   return this.drawingTool.$element;
 };

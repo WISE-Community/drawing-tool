@@ -16,8 +16,12 @@ function generateStamps(uiDefinition, stampsDefition) {
     label: 'M',
     palette: 'main',
     activatesTool: 'stamp',
-    onLongPress: function () {
-      this.ui.togglePalette('stampCategories');
+    onClick: function () {
+      var currentStamp = this.dt.tools.stamp._stamp;
+      if (this.ui.isToolActive(['stamp']) || currentStamp == null) {
+        this.ui.togglePalette('stampCategories');
+        this.ui.togglePalette(Object.keys(stampsDefition)[0] + 'StampsPalette');
+      }
     },
     onStampChange: function (newStamp) {
       this.$icon.attr('src', newStamp.imgSrc);
