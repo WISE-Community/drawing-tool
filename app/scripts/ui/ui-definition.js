@@ -173,7 +173,8 @@ var ui = {
       onClick: function () {
         this.ui.togglePalette('strokeColors');
       },
-      icon: require('../../assets/color-stroke-icon.svg')
+      icon: require('../../assets/color-stroke-icon.svg'),
+      attributeSelector: true
     },
     {
       name: 'fillColorPalette',
@@ -189,7 +190,8 @@ var ui = {
       onClick: function () {
         this.ui.togglePalette('fillColors');
       },
-      icon: require('../../assets/color-fill-icon.svg')
+      icon: require('../../assets/color-fill-icon.svg'),
+      attributeSelector: true
     },
     {
       name: 'strokeWidthPalette',
@@ -203,7 +205,8 @@ var ui = {
       onStateChange: function (state) {
         this.setLineWidth(state.strokeWidth);
       },
-      icon: require('../../assets/line-width-icon.svg')
+      icon: require('../../assets/line-width-icon.svg'),
+      attributeSelector: true
     },
     {
       name: 'clone',

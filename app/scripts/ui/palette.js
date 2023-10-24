@@ -41,7 +41,7 @@ Palette.prototype._show = function () {
   this.$element.show();
 
   var anchorButton = this.anchor && this.ui.getButton(this.anchor);
-  if (anchorButton) {
+  if (!anchorButton.attributeSelector) {
     anchorButton.$element.addClass("dt-active");
   }
 
@@ -59,10 +59,6 @@ Palette.prototype._show = function () {
 Palette.prototype._hide = function () {
   this.$element.hide();
   this._clearWindowHandlers();
-  var anchorButton = this.anchor && this.ui.getButton(this.anchor);
-  if (anchorButton) {
-    anchorButton.$element.removeClass("dt-active");
-  }
 
 };
 
