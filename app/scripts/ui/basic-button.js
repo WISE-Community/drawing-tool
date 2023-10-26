@@ -12,6 +12,7 @@ function BasicButton(options, ui, drawingTool, extraClasses) {
 
   this.name = options.name;
   this.palette = options.palette;
+  this.attributeSelector = options.attributeSelector;
   // Note that this will be called later by UI manager.
   this.onInit = options.onInit;
 
