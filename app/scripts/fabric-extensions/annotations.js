@@ -48,18 +48,16 @@ function handleAnnotations(annotationTool) {
       annotationId &&
       e.target.type === fabric.AnnotationText.prototype.type
     ) {
-      var text = fabric.Annotations.get(
-        annotationId,
-        fabric.AnnotationText.prototype.type
-      );
-      var border = fabric.Annotations.get(
-        annotationId,
-        fabric.AnnotationBorder.prototype.type
-      );
-      var arrow = fabric.Annotations.get(
-        annotationId,
-        fabric.AnnotationArrow.prototype.type
-      );
+
+      // find the associated objects
+      const objects = {};
+      canvas.forEachObject((object) => {
+        if (object.annotationId === annotationId) {
+          objects[object.type.replace("annotation-", "")] = object;
+        }
+      });
+
+      const {text, border, arrow} = objects;
       if (!text || !border || !arrow) {
         return;
       }
@@ -85,30 +83,37 @@ function handleAnnotations(annotationTool) {
       annotationId &&
       e.target.type !== fabric.AnnotationControlPoint.prototype.type
     ) {
-      var text = fabric.Annotations.get(
-        annotationId,
-        fabric.AnnotationText.prototype.type
-      );
-      var border = fabric.Annotations.get(
-        annotationId,
-        fabric.AnnotationBorder.prototype.type
-      );
-      var arrow = fabric.Annotations.get(
-        annotationId,
-        fabric.AnnotationArrow.prototype.type
-      );
-      var controlPoint = fabric.Annotations.get(
-        annotationId,
-        fabric.AnnotationControlPoint.prototype.type
-      );
+      canvas.forEachObject((object) => {
+        if (object.annotationId === annotationId) {
+          canvas.remove(object);
+        }
+      });
+    }
+  });
 
-      if (text && e.target !== text) canvas.remove(text);
-      if (border && e.target !== border) canvas.remove(border);
-      if (arrow && e.target !== arrow) canvas.remove(arrow);
-      if (controlPoint && e.target !== controlPoint)
-        canvas.remove(controlPoint);
+  canvas.on('text:editing:entered', (e) => {
+    e.target.__annotationTextLastValue = e.target.hiddenTextarea.value;
+    if (e.target.__annotationKeyUpHandler) {
+      e.target.hiddenTextarea.removeEventListener("keyup", e.target.__annotationKeyUpHandler);
+    }
 
-      fabric.Annotations.remove(annotationId);
+    e.target.__annotationKeyUpHandler = (keyEvent) => {
+      var key = keyEvent.key;
+      var value = e.target.hiddenTextarea.value;
+      if (((key === "Delete") || (key === "Backspace")) && (value === "") && (e.target.__annotationTextLastValue === "")) {
+        e.target.hiddenTextarea.removeEventListener("keyup", e.target.__annotationKeyUpHandler);
+        e.target.__annotationKeyUpHandler = null;
+        canvas.remove(e.target);
+      }
+      e.target.__annotationTextLastValue = value;
+    }
+    e.target.hiddenTextarea.addEventListener("keyup", e.target.__annotationKeyUpHandler);
+  });
+
+  canvas.on('text:editing:exiting', (e) => {
+    if (e.target.__annotationKeyUpHandler) {
+      e.target.hiddenTextarea.removeEventListener("keyup", e.target.__annotationKeyUpHandler);
+      e.target.__annotationKeyUpHandler = null;
     }
   });
 }
@@ -129,29 +134,20 @@ module.exports = handleAnnotations;
   fabric.Annotations = {
     margin: 10,
 
-    annotations: {},
-
-    set: function (id, annotation) {
-      this.annotations[id] = this.annotations[id] || {};
-      this.annotations[id][annotation.type] = annotation;
+    getObject: function (canvas, id, type) {
+      return canvas.getObjects(type).find(object => object.annotationId === id);
     },
 
-    get: function (id, type) {
-      return (this.annotations[id] && this.annotations[id][type]) || undefined;
-    },
-
-    remove: function (id, type) {
-      if (type) {
-        if (this.annotations[id]) {
-          delete this.annotations[id][type];
-        }
-      } else {
-        delete this.annotations[id];
-      }
+    getAllAnnotationIds: function (canvas) {
+      return canvas.getObjects(fabric.AnnotationText.prototype.type).reduce((acc, cur) => {
+        acc.push(cur.annotationId);
+        return acc;
+      }, []);
     },
 
     addControlPoint: function (annotationId, canvas) {
-      var controlPoint = fabric.Annotations.get(
+      var controlPoint = fabric.Annotations.getObject(
+        canvas,
         annotationId,
         fabric.AnnotationControlPoint.prototype.type
       );
@@ -159,14 +155,19 @@ module.exports = handleAnnotations;
         return;
       }
 
-      var text = fabric.Annotations.get(
+      var text = fabric.Annotations.getObject(
+        canvas,
         annotationId,
         fabric.AnnotationText.prototype.type
       );
-      var arrow = fabric.Annotations.get(
+      var arrow = fabric.Annotations.getObject(
+        canvas,
         annotationId,
         fabric.AnnotationArrow.prototype.type
       );
+      if (!text || !arrow) {
+        return;
+      }
 
       controlPoint = new fabric.AnnotationControlPoint({
         annotationId,
@@ -182,7 +183,6 @@ module.exports = handleAnnotations;
         originX: 'center',
         originY: 'center'
       });
-      fabric.Annotations.set(annotationId, controlPoint);
 
       controlPoint.on('moving', () => {
         var p = fabric.Annotations.calcArrowPoints(text, {
@@ -199,13 +199,13 @@ module.exports = handleAnnotations;
     },
 
     removeControlPoint: function (annotationId, canvas) {
-      var controlPoint = fabric.Annotations.get(
+      var controlPoint = fabric.Annotations.getObject(
+        canvas,
         annotationId,
         fabric.AnnotationControlPoint.prototype.type
       );
       if (controlPoint) {
         controlPoint.off('moving');
-        this.remove(annotationId, fabric.AnnotationControlPoint.prototype.type);
         if (canvas.contains(controlPoint)) {
           canvas.remove(controlPoint);
         }
@@ -213,13 +213,13 @@ module.exports = handleAnnotations;
     },
 
     addAllControlPoints: function (canvas) {
-      Object.keys(this.annotations).forEach((id) => {
+      fabric.Annotations.getAllAnnotationIds(canvas).forEach((id) => {
         fabric.Annotations.addControlPoint(id, canvas);
       });
     },
 
     removeAllControlPoints: function (canvas, exceptId) {
-      Object.keys(this.annotations).forEach((id) => {
+      fabric.Annotations.getAllAnnotationIds(canvas).forEach((id) => {
         if (id !== exceptId) {
           fabric.Annotations.removeControlPoint(id, canvas);
         }
@@ -323,7 +323,6 @@ module.exports = handleAnnotations;
         this.callSuper('initialize', text, options);
         options = options || {};
         this.set('annotationId', options.annotationId);
-        fabric.Annotations.set(options.annotationId, this);
       },
 
       containsPoint: function (point) {
@@ -332,13 +331,22 @@ module.exports = handleAnnotations;
                point.y >= borderRect.top && point.y <= borderRect.top + borderRect.height;
       },
 
+      exitEditing: function() {
+        // fire this before calling into the library so we have access to the hidden textarea
+        // which isn't present when the 'text:editing:exited' event is fired
+        if (this.canvas) {
+          this.canvas.fire('text:editing:exiting', { target: this });
+        }
+        this.callSuper('exitEditing');
+      },
+
       _renderTextCommon: function (ctx, method) {
         this.callSuper('_renderTextCommon', ctx, method);
 
-        var border = fabric.Annotations.get(
-          this.annotationId,
-          fabric.AnnotationBorder.prototype.type
-        );
+        const annotationId = this.annotationId;
+        let requestReRender = false;
+
+        const border = this.canvas.getObjects(fabric.AnnotationBorder.prototype.type).find(object => object.annotationId === annotationId);
         if (border) {
           var newRect = fabric.Annotations.calcBorderRect(this);
           if (
@@ -346,20 +354,21 @@ module.exports = handleAnnotations;
             border.height !== newRect.height
           ) {
             border.set(newRect);
-            this.canvas.requestRenderAll();
+            requestReRender = true;
           }
         }
 
-        var arrow = fabric.Annotations.get(
-          this.annotationId,
-          fabric.AnnotationArrow.prototype.type
-        );
+        const arrow = this.canvas.getObjects(fabric.AnnotationArrow.prototype.type).find(object => object.annotationId === annotationId);
         if (arrow) {
           var p = fabric.Annotations.calcArrowPoints(this, arrow);
           if (arrow.x1 !== p[0] || arrow.y1 !== p[1]) {
             arrow.set({ x1: p[0], y1: p[1] });
-            this.canvas.requestRenderAll();
+            requestReRender = true;
           }
+        }
+
+        if (requestReRender) {
+          this.canvas.requestRenderAll();
         }
       },
 
@@ -416,7 +425,6 @@ module.exports = handleAnnotations;
           lockMovementY: true,
           hoverCursor: 'default'
         });
-        fabric.Annotations.set(options.annotationId, this);
       },
 
       /**
@@ -536,7 +544,6 @@ module.exports = handleAnnotations;
           lockMovementY: true,
           hoverCursor: 'default'
         });
-        fabric.Annotations.set(options.annotationId, this);
       },
 
       /**
@@ -595,7 +602,6 @@ module.exports = handleAnnotations;
           hasControls: false,
           hasBorders: false
         });
-        fabric.Annotations.set(options.annotationId, this);
       },
 
       /**
